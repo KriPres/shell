@@ -1,0 +1,272 @@
+================================================================================
+CS 214 - Project 3: My Shell
+================================================================================
+
+AUTHORS
+-------
+Name:  Krishaan Chaudhary      NetID: kac551
+Name:  Aryaman Mishra          NetID: am4021
+
+================================================================================
+HOW TO BUILD AND RUN
+================================================================================
+
+REQUIREMENTS
+------------
+    - GCC compiler (tested on iLab with gcc)
+    - GNU Make
+    - All source files in the same directory
+
+BUILDING
+--------
+To compile all programs at once, run:
+
+    make
+
+This produces the following executable:
+    
+    mysh        — used execute shell commands in interactive and batch modes
+
+To remove all compiled files and start fresh:
+
+    make clean
+
+
+RUNNING FILE COMPARE
+--------------------------
+    ./compare {file_path_1} ... {file_path_n} {dir_path_1} ... {dir_path_n}  
+
+computes and returns Jensen–Shannon Distane (JSD) between all pairs of the following:
+    
+    parseable files passed in as arguments
+    files ending with *.txt inside directories passed in as arguments (recursively)
+
+
+RUNNING THE TEST PROGRAM
+--------------------------------
+    ./tests.sh
+
+No arguments needed. Runs all of the individual tests below:
+
+DESCRIPTION OF THE INDIVIDUAL TESTS
+------------------------------
+
+    TEST 0: ./compare tests/test_0/foo tests/test_0/bar       confirm directly passed files processed; *.txt files in directories
+
+    TEST 1: ./compare tests/test_1      ensure white spaces and middle of word apostrophes are handled
+
+    TEST 2: ./compare tests/test_2      ensure hyphens(dashes) are handled appropriately, and more text in *.txt files
+
+    TEST 3: ./compare       ensure no output if 0 total input files
+
+    TEST 4: ./compare tests/test_1/foo.txt      ensure no output if 1 total input files
+
+    TEST 5: ./compare smth.txt no_such_dir      ensure proper perror for nonexistent paths + directories
+
+    TEST 6: ./compare tests/test_6/test_1.py tests/test_6/test_2.py tests/test_6/test_3.java tests/test_6/test_4.txt        ensure directly passed in non *.txt files are processed if possible
+
+
+    TEST 7: ./compare tests/test_7      ensure files are sorted in order of decreasing combined total word count large = 201, medium = 52, small = 1
+
+    TEST 8: ./compare tests/test_8      ensure empty *.txt files are handled appropriately
+
+    TEST 9: ./compare tests/test_9      ensure hidden files - starting with . - are handled appropriately (ignored)
+
+    TEST 10: ./compare tests/test_10    ensure nested directories are handled appropriately
+
+    TEST 11: ./compare tests/test_11    STRESS TEST - ensure program can handle files with large amount of words (>9,000 each)
+
+    TEST 12: ./compare tests/test_12        ensures hidden directories are skipped
+
+    TEST 13: ./compare tests/tests_12/.hidden_dir       ensures directly passed in hidden directories are parsed
+
+You may have to activate execute access for the .sh file by running
+
+chmod +x ./tests.sh
+
+in the terminal
+
+================================================================================
+DESIGN NOTES
+================================================================================
+
+OVERVIEW
+--------
+This project implements a program, compare, that analyzes a set of files and reports
+their similarity using by computing the Jenson-Shannon distance (JSD) for each pair of files in the set
+
+FILES + PURPOSES
+--------------
+
+================================================================================
+FILE: compare.c
+================================================================================
+
+Purpose: combines logic of all the other files to carry out overall purpose described
+in overview. More detailed description of Algorithm described below.
+
+================================================================================
+FILES: arraylist.h, arraylist.c
+================================================================================
+
+Purpose: arraylist.h is a header file that defines a struct and functions for an
+arraylist data structure, which is implemented by arraylist.c. The arraylist is 
+resized to be larger if necessary, and each individual entry in the array list 
+is a char * to represent words. This implementation includes the following methods:
+
+    1. al_init: for allocating memory for the arraylist.
+    2. has_word: returns true if a word is present in the arraylist.
+    3. al_length: get length of array.
+    4. al_push: add item to array.
+    5. al_pop: remove and return last element in array. 
+    6. al_destroy: to free memory used by the arraylist.
+
+================================================================================
+FILES: linestream.h, linestream.c
+================================================================================
+
+Purpose: linestream.h is a header file that defines a struct and functions for a
+lines_t data structure, which is implemented by linestream.c. The purpose of linestream
+is to allow for a buffered storage of each individual line, which is crucial for
+parsing files using system-level commands, like open(), readdir(), and close(). It
+contains the following methods:
+
+    1. lines_init: initialize lines based on passed in pointer and file descriptor.
+    2. lines_next: return string by processing pointer.
+    3. lines_destroy: free buffer based on passed in pointer.
+
+================================================================================
+FILES: fileutils.h, fileutils.c
+================================================================================
+
+Purpose: fileutils.h is a header file that defines functions for file manipulation.
+This compartmentalizes file handling in a clean and concise way. This is useful for 
+checking if file names end with desired suffixes and for parsing directories. It 
+contains the following functions:
+
+    1. ends_with: returns 1 if target string ends with suffix; 0 otherwise.
+    2. recursive_traversal: add all desired paths to a file list.
+
+================================================================================
+FILES: wordlist.h, wordlist.c
+================================================================================
+
+Purpose: wordlist.h is a header file that defines a struct and functions for
+a linked list data structure, implemented by wordlist.c. This is useful for 
+representing word frequencies for a particular file. Each individual node consists
+of a string (char *), count, frequency, and reference to the next node. The count
+information is particularly useful for sorting the final list of file pairs.
+It contains the following methods:
+
+    1. createNode: useful method for node creation and memory allocation.
+    2. update: given a word, updates wordlist accordingly.
+    3. calcDecimal: based on word counts, computes frequency proportion for each word.
+    4. get_freq: returns frequency of a particular word.
+    5. total_num_words: return total number of words in a file.
+    6. freeList: frees memory allocated for list.
+    7. printList: nice helper method for visualizing contents of list.
+
+================================================================================
+FILES: jsd.h, jsd.c
+================================================================================
+
+Purpose: jsd.h is a header file that defines a struct and functions for
+a jsd data structure, implemented by jsd.c. This is useful associating a file
+pairing with its jsd and then computing that jsd. The jsd struct contains file 
+1's name and wordlist, file 2's name and worlist, and a double to store the 
+jsd value. It contains the following methods to accomplish that:
+
+    1. compute_jsd: given the first 4 attributes, it calculates and stores the jsd.
+    2. print_jsd: helpful debugging method to print contents of jsd.
+    3. comp: comparator function passed to qsort to sort by decreasing combined word length.
+
+================================================================================
+ALGORITHM: compare
+================================================================================
+
+    Step 1: Create an arraylist of files that need to be parsed: FileList.
+    If any files are not parsable or openable, perror accordingly.
+
+    Step 2: Determine maximum word length across all files by parsing every 
+    file.
+
+    Step 3: Create an array of wordlists for each file in FileList.
+
+    Step 4: For each file in FileList, create and populate a wordlist by reading
+    it using our file parsing mechanism (linestream + string processing). Update 
+    each word_list to store decimal frequency.
+
+    Step 5: Initialize an array of jsd_t's to store each comparison. This is of size
+    (N * (N-1)) / 2 for each pair. By default, each jsd_t consists of:
+        {file_1_name, file_2_name, file_1_word_list, file_2_wordlist, -1 (default jsd)}
+    
+    Step 6: Iterate over array of jsd_t's and compute jsd (5th attribute) based on first
+    4 attributes.
+
+    Step 7: Sort the list of jsd_t's using the appropriate comparator.
+
+    Step 8: Display each pair of files along with associated jsd using print_jsd.
+
+
+================================================================================
+TEST - JUSTIFICATION
+================================================================================
+
+tests.sh
+
+TEST 0: ensure that JSD calculations and file parsing works in simplest case that
+can be verified with the example in the project requirements document.
+
+TEST 1, 2, 8: these tests check for edge cases in terms of string processing by
+passing in .txt files that are either completely blank, involve whitespace, 
+characters that should be ignored in the middle of words, and the hyphen case.
+
+TEST 3, 4: these tests ensure that the program doesn't crash if it receives < 2
+arguments where each argument is directly a .txt file. The goal is robustness to
+non-optimal user input.
+
+TEST 5, 9: these tests ares used to ensure that strange paths and directories are
+reported and handled appropriately, so they do not crash the program. This includes
+non-existent and hidden paths. The goal is also robustness to non-optimal user input.
+
+TEST 6: this is another robustness test that checks if non *.txt files can be handled.
+
+TEST 7: this is a correctness test that ensures that the final list of file pairs
+is sorted by decreasing total word count.
+
+TEST 10, 11: these are stress tests that assess the program's robustiness to large
+inputs: large amount of text in .txt file and several levels of nested directories. 
+
+TEST 12, 13: these tests confirm that hidden directories are ignored if contained
+inside a passed in directory, but considered if passed in directly.
+
+================================================================================
+ERROR HANDLING
+================================================================================
+
+The key error handling in this program occurs in 3 ways:
+    1. If stat returns -1 at any point, return perror(path)
+    2. If directory is NULL, return perror (directory_path)
+    3. If a path is neither S_ISREG not S_ISDIR, return perror (path)
+
+================================================================================
+KNOWN LIMITATIONS
+================================================================================
+
+Based on the design and implementation, there are some limitations to this compare
+program. They include:
+
+    1. If a file may have gibberish text, which is read when processing files with
+    *.png or *.pdf extensions, these will still be read even though that text is not
+    a meaningful representation of the contents of those files.
+
+    2. We are also limited by the nature of the JSD metric. Depending on the task,
+    there are other metrics that could better capture file similarity in a way that 
+    encapsulates more than word distribution, but also magnitude of the contents of 
+    each file.
+
+    3. The way that we process words, we are missing out on distinctions between
+    words that would typically be considered different, such as can't vs. cant, 
+    cars vs. car's. We also lose out on assesing the non alphanumeric, non-dash 
+    characters, which could be important parts of a file's representation and 
+    distribution.

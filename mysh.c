@@ -47,4 +47,9 @@ int main(int argc, char** argv){
         printf("Welcome to my shell!\n");
     } 
 
+    // One shared execution loop for both cases
+    while (1){
+        break;
+    }
+
 }
