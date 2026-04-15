@@ -19,6 +19,8 @@ unsigned al_length(arraylist_t *);
 // Function to append item to end of arraylist
 int al_push(arraylist_t *, char *);
 
+int al_push_nocheck(arraylist_t *, char *);
+
 // Function to pop and return last element of arraylist
 char * al_pop (arraylist_t *);
 

@@ -17,12 +17,9 @@ void al_init(arraylist_t * L, unsigned int init_capacity){
 }
 
 // returns 1 if arraylist contains target_word, 0 otherwise
-int has_word(arraylist_t * L, char * target_word){
-    for(int i = 0; i < L->length; i++){
-        if (L->array[i] == target_word){
-            return 1;
-        }
-    }
+int has_word(arraylist_t *L, char *word) {
+    for (unsigned i = 0; i < L->length; i++)
+        if (strcmp(L->array[i], word) == 0) return 1;
     return 0;
 }
 
@@ -50,6 +47,22 @@ int al_push(arraylist_t * L, char * item){
         }
     }
 
+    if (L->length == L->capacity){
+        unsigned newcap = L->capacity * 2;
+        char **new_array = realloc(L->array, sizeof(char*) * newcap);
+        if (!new_array){
+            return 1;
+        }
+        L->array = new_array;
+        L->capacity = newcap;
+    }
+    L->array[L->length] = strdup(item);
+    L->length++;
+    return 0;
+}
+
+// append without dedup (for argv / token lists)
+int al_push_nocheck(arraylist_t * L, char * item){
     if (L->length == L->capacity){
         unsigned newcap = L->capacity * 2;
         char **new_array = realloc(L->array, sizeof(char*) * newcap);
