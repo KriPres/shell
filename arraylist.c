@@ -62,6 +62,7 @@ int al_push(arraylist_t * L, char * item){
 }
 
 // append without dedup (for argv / token lists)
+// allows duplicate entries in the array list
 int al_push_nocheck(arraylist_t * L, char * item){
     if (L->length == L->capacity){
         unsigned newcap = L->capacity * 2;

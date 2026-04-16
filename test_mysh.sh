@@ -5,23 +5,30 @@ PASS=0
 FAIL=0
 BINARY=./mysh
 
+# run a test by comparing command output
 check() {
-    local desc="$1"
-    local input="$2"
-    local expected="$3"
+    local desc="$1"         # test description
+    local input="$2"        # input passed into shell via stdin
+    local expected="$3"     # expected output
     local actual
+
+    # run shell with input
     actual=$(printf '%s\n' "$input" | $BINARY 2>&1)
+
+    # check if test case passed by matching actual output with expected output
     if [ "$actual" = "$expected" ]; then
         echo "[PASS] $desc"
         ((PASS++))
     else
         echo "[FAIL] $desc"
-        echo "       expected: $(echo "$expected" | head -3)"
-        echo "       actual:   $(echo "$actual"   | head -3)"
+        echo " expected: $(echo "$expected" | head -3)"
+        echo " actual:   $(echo "$actual"   | head -3)"
         ((FAIL++))
     fi
 }
 
+
+# testing batch mode
 check_file() {
     local desc="$1"
     local file="$2"
@@ -33,12 +40,13 @@ check_file() {
         ((PASS++))
     else
         echo "[FAIL] $desc"
-        echo "       expected: $(echo "$expected" | head -3)"
-        echo "       actual:   $(echo "$actual"   | head -3)"
+        echo " expected: $(echo "$expected" | head -3)"
+        echo " actual:   $(echo "$actual"   | head -3)"
         ((FAIL++))
     fi
 }
 
+# check exit code for command
 check_exit() {
     local desc="$1"
     local cmd="$2"
@@ -50,8 +58,8 @@ check_exit() {
         ((PASS++))
     else
         echo "[FAIL] $desc"
-        echo "       expected exit: $expected_code"
-        echo "       actual exit:   $actual_code"
+        echo " expected exit: $expected_code"
+        echo " actual exit:   $actual_code"
         ((FAIL++))
     fi
 }
@@ -238,20 +246,39 @@ TMPOUT=/tmp/mysh_redir_out.txt
 TMPIN=/tmp/mysh_redir_in.txt
 echo "hello from file" > $TMPIN
 
-check "output redirection creates file" \
-    "ls /tmp > $TMPOUT
-cat $TMPOUT" \
-    "$(ls /tmp)"
+printf 'ls /tmp > %s\n' "$TMPOUT" > $SCRIPT
+$BINARY "$SCRIPT" 2>&1
+actual=$(cat "$TMPOUT" 2>/dev/null)
+expected=$(ls /tmp)
+if [ "$actual" = "$expected" ]; then
+    echo "[PASS] output redirection creates file"
+    ((PASS++))
+else
+    echo "[FAIL] output redirection creates file"
+    echo " expected: $(echo "$expected" | head -3)"
+    echo " actual:   $(echo "$actual"   | head -3)"
+    ((FAIL++))
+fi
+rm -f $TMPOUT
 
 check "input redirection reads from file" \
     "cat < $TMPIN" \
     "hello from file"
 
-check "output redirection truncates existing file" \
-    "ls /tmp > $TMPOUT
-ls /tmp > $TMPOUT
-cat $TMPOUT" \
-    "$(ls /tmp)"
+printf 'ls /tmp > %s\nls /tmp > %s\n' "$TMPOUT" "$TMPOUT" > $SCRIPT
+$BINARY "$SCRIPT" 2>&1
+actual=$(cat "$TMPOUT" 2>/dev/null)
+expected=$(ls /tmp)
+if [ "$actual" = "$expected" ]; then
+    echo "[PASS] output redirection truncates existing file"
+    ((PASS++))
+else
+    echo "[FAIL] output redirection truncates existing file"
+    echo " expected: $(echo "$expected" | head -3)"
+    echo " actual: $(echo "$actual" | head -3)"
+    ((FAIL++))
+fi
+rm -f $TMPOUT
 
 printf 'ls /tmp > %s\n' "$TMPOUT" > $SCRIPT
 check_file "output redirection in script file" \
@@ -299,7 +326,7 @@ if echo "$actual" | grep -q "$(pwd)"; then
     ((PASS++))
 else
     echo "[FAIL] syntax error near < recovers and continues"
-    echo "       actual: $actual"
+    echo " actual: $actual"
     ((FAIL++))
 fi
 
@@ -310,7 +337,7 @@ if echo "$actual" | grep -q "$(pwd)"; then
     ((PASS++))
 else
     echo "[FAIL] syntax error near > recovers and continues"
-    echo "       actual: $actual"
+    echo " actual: $actual"
     ((FAIL++))
 fi
 

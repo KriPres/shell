@@ -3,13 +3,10 @@ CFLAGS = -std=c99 -g -Wvla -Wall -fsanitize=address,undefined
 
 all: mysh
 
-mysh: mysh.o arraylist.o linestream.o fileutils.o 
+mysh: mysh.o arraylist.o linestream.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 mysh.o: mysh.c arraylist.h
-	$(CC) $(CFLAGS) -c $<
-
-fileutils.o: fileutils.c fileutils.h arraylist.h
 	$(CC) $(CFLAGS) -c $<
 
 arraylist.o: arraylist.c arraylist.h
